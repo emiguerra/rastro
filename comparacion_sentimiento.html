@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>rastro — comparación Comprehend vs ml5.js</title>
+<script src="https://unpkg.com/ml5@1/dist/ml5.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 0 20px;
+    color: #222;
+    line-height: 1.5;
+  }
+  h1 { font-size: 20px; }
+  p.hint { color: #666; font-size: 14px; }
+  textarea {
+    width: 100%;
+    height: 140px;
+    font-size: 15px;
+    padding: 10px;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+  button {
+    margin-top: 12px;
+    padding: 10px 18px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button:disabled { cursor: not-allowed; opacity: 0.5; }
+  #estado {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+  }
+  #resultado {
+    margin-top: 24px;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    display: none;
+  }
+  #resultado.visible { display: block; }
+  .score-numero {
+    font-size: 32px;
+    font-weight: bold;
+  }
+  .barra {
+    height: 14px;
+    background: linear-gradient(to right, #c0392b, #f1c40f, #27ae60);
+    border-radius: 7px;
+    position: relative;
+    margin: 14px 0;
+  }
+  .marcador {
+    position: absolute;
+    top: -6px;
+    width: 4px;
+    height: 26px;
+    background: #000;
+    transform: translateX(-2px);
+  }
+  .etiquetas { display: flex; justify-content: space-between; font-size: 12px; color: #666; }
+  .nota {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #555;
+    background: #f7f7f7;
+    padding: 10px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>rastro — comparación: Amazon Comprehend vs ml5.js Sentiment</h1>
+<p class="hint">
+  Pega aquí la misma transcripción que ya analizaste con <code>rastro_pipeline.py</code> (Comprehend)
+  y compara contra lo que devuelve ml5.js para el mismo texto.
+</p>
+
+<textarea id="texto" placeholder="Pega aquí la transcripción..."></textarea><br>
+<button id="btnAnalizar" disabled>Cargando modelo...</button>
+<div id="estado"></div>
+
+<div id="resultado">
+  <div>Score ml5.js (0 = negativo, 1 = positivo):</div>
+  <div class="score-numero" id="scoreNumero">-</div>
+  <div class="barra">
+    <div class="marcador" id="marcador" style="left: 0%"></div>
+  </div>
+  <div class="etiquetas">
+    <span>0.0 — negativo</span>
+    <span>0.5 — neutral</span>
+    <span>1.0 — positivo</span>
+  </div>
+  <div class="nota">
+    Nota: ml5.js no usa categorías (Positive/Negative/Neutral/Mixed) como Comprehend —
+    da un único número continuo, entrenado sobre reseñas de películas (IMDB), en inglés.
+    Si tu texto está en español, el resultado puede ser poco confiable — es justamente
+    parte de lo interesante a comparar: dos modelos, dos formas distintas de forzar el
+    mismo texto humano dentro de una estructura fija.
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById("btnAnalizar");
+  const estado = document.getElementById("estado");
+  const resultado = document.getElementById("resultado");
+  const scoreNumero = document.getElementById("scoreNumero");
+  const marcador = document.getElementById("marcador");
+
+  let sentiment;
+
+  async function cargarModelo() {
+    sentiment = await ml5.sentiment("movieReviews");
+    estado.textContent = "Modelo cargado. Listo para analizar.";
+    btn.disabled = false;
+    btn.textContent = "Analizar sentimiento";
+  }
+
+  cargarModelo();
+
+  btn.addEventListener("click", async () => {
+    const texto = document.getElementById("texto").value.trim();
+    if (!texto) {
+      estado.textContent = "Pega un texto primero.";
+      return;
+    }
+    const prediction = await sentiment.predict(texto);
+    console.log("prediction:", prediction);
+    const score = prediction.score ?? prediction.confidence;
+
+    if (score === undefined) {
+      estado.textContent = "El resultado no trae 'score'. Mira la consola para ver el objeto completo.";
+      return;
+    }
+
+    scoreNumero.textContent = score.toFixed(3);
+    marcador.style.left = (score * 100) + "%";
+    resultado.classList.add("visible");
+  });
+</script>
+
+</body>
+</html>

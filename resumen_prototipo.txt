@@ -1,0 +1,106 @@
+RESUMEN DEL PROTOTIPO — rastro
+================================
+
+QUE ES EL PROTOTIPO
+--------------------
+Un visitante habla frente a una camara/microfono. El sistema transcribe su voz,
+analiza el sentimiento del texto, y en paralelo analiza su expresion facial —
+mostrando en vivo como dos sistemas distintos de IA imponen categorias
+arbitrarias diferentes sobre el mismo instante humano. Esa es la columna
+vertebral del argumento de tesis: no es solo "el clasificador se equivoca", es
+que la taxonomia misma (sea de Amazon Comprehend, de un modelo de estrellas, o
+de una malla de puntos faciales) es una imposicion arbitraria tratada como si
+fuera un hecho objetivo.
+
+EL GIRO DE ARQUITECTURA
+------------------------
+Se empezo con un pipeline AWS (Transcribe + Comprehend, subiendo un audio
+grabado a S3). Funciono, y de hecho dio un resultado perfecto para el
+argumento: un verso de Dante sobre el infierno clasificado como "Positive" con
+56% de confianza. Pero se decidio migrar el prototipo principal a emiSpeech,
+una app 100% en navegador (sin AWS, sin backend, todo corriendo localmente) —
+mas simple de conectar el dia de la presentacion, sin depender de credenciales
+ni de subir archivos.
+
+COMPONENTES ACTUALES DE emiSpeech
+-----------------------------------
+1. Transcripcion en vivo — Web Speech API (via p5.speech.js), en espanol
+   (es-CL), con resultados parciales en tiempo real (texto en cursiva mientras
+   hablas, se confirma al pausar).
+
+2. Sentimiento del texto — transformers.js corriendo
+   Xenova/bert-base-multilingual-uncased-sentiment (modelo de 1 a 5 estrellas,
+   entrenado en espanol entre otros idiomas), mapeado a positivo/neutral/
+   negativo con una barra de color.
+
+3. Expresion del rostro — ml5.imageClassifier cargando un modelo de Teachable
+   Machine (3 clases: positivo/neutral/negativo), entrenado con muestras de la
+   propia cara.
+
+4. Malla de puntos faciales — ml5.faceMesh, dibuja ~468 puntos en tiempo real
+   sobre el rostro con 3 etiquetas de coordenadas ("NASAL", "LABIAL",
+   "OCULAR") estilo readout biometrico — la parte visualmente mas fuerte para
+   el argumento: literalmente reduce la cara a numeros en vivo.
+
+5. Front-end — HTML/CSS real (no dibujado en canvas), estetica oscura tipo
+   terminal/vigilancia, con indicador de estado pulsante.
+
+HARDWARE
+--------
+- Camara: Canon EOS T4i via capturador HDMI-a-USB (confirmado que NO es
+  compatible con el software oficial de Canon EOS Webcam Utility, asi que el
+  capturador es obligatorio). Ya esta funcionando y reconocida por el
+  navegador.
+
+- Microfono: originalmente planeado el SM57 + Arturia MiniFuse 2 — ESTO QUEDO
+  PENDIENTE DE CONFIRMAR: falta verificar si emiSpeech esta efectivamente
+  escuchando por el MiniFuse o por el microfono integrado del Mac.
+
+HALLAZGOS TECNICOS IMPORTANTES (para no repetir errores)
+-----------------------------------------------------------
+- ml5.sentiment (MovieReviews) es SOLO INGLES — por eso se usa transformers.js
+  con el modelo multilingue en su lugar.
+
+- ml5.js next-gen cambio varias APIs a async/Promise (ml5.sentiment(),
+  .predict()) — hay que usar await, no callbacks viejos.
+
+- @teachablemachine/image + tfjs en paralelo con ml5.js genera conflictos de
+  backend (error de WebGPU) — se resolvio usando ml5.imageClassifier() nativo
+  para cargar el modelo de Teachable Machine, todo bajo un solo motor de
+  TensorFlow.
+
+- ml5.faceMesh carga de forma asincrona — hay que esperar faceMesh.ready antes
+  de llamar detectStart, si no tira error.
+
+- El canvas de los puntos debe coincidir con la resolucion nativa del video,
+  no un tamano fijo arbitrario — si no, los puntos se dibujan fuera de lugar.
+
+- p5.js fuerza su propio tamano de canvas por CSS inline, hay que
+  sobreescribirlo con .style() explicito para que el canvas se escale igual
+  que el video.
+
+- El espejo (mirror) solo tiene sentido para camara selfie — con la T4i
+  (camara externa apuntando al visitante) se desactivo, porque ademas volteaba
+  el texto del menu de la camara.
+
+- Correr 2 modelos de IA en video a resolucion nativa (1080p+) satura el
+  sistema — se bajo la captura a 480x360, mejoro notablemente la fluidez
+  general.
+
+- Un modelo de Teachable Machine no generaliza entre camaras distintas —
+  entrenado con la camara del Mac, no reconoce bien con la T4i. Esto quedo
+  como PENDIENTE: hay que reentrenar seleccionando la T4i como fuente dentro
+  de Teachable Machine.
+
+- La T4i no es compatible con Canon EOS Webcam Utility — se necesita
+  capturador HDMI-a-USB (confirmado que ya se tiene uno funcionando).
+
+PENDIENTES ABIERTOS
+--------------------
+1. Reentrenar Teachable Machine con la T4i como camara fuente.
+2. Confirmar si el microfono usado es el MiniFuse+SM57 o el integrado del Mac.
+3. Lista de mejoras anotada: barra de sonido para saber cuando se esta
+   hablando, y que la camara ocupe todo el fondo con los demas paneles
+   superpuestos encima.
+4. Probar con TV montada en sala (conexion HDMI del Mac, es solo cableado
+   fisico, sin cambios de codigo).

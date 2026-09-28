@@ -19,7 +19,7 @@ dentro del repo del firmware.
 | 4× nodos de captura (XIAO ESP32S3 Sense) — gestualidad/patrones corporales | [esp32Rastro](https://github.com/emiguerra/esp32Rastro) | Firmware en desarrollo |
 | Raspberry Pi "cerebro" (clasificación + estado de fase) | _pendiente de crear_ | No iniciado |
 | Raspberry Pi × 2 de proyección (una por proyector) | _pendiente de crear_ | No iniciado |
-| Raspberry Pi de redundancia caliente | _pendiente de crear_ | No iniciado |
+| 4ta Raspberry Pi — repuesto sin uso asignado, para reemplazar en el momento a cualquiera de las otras 3 si falla durante la exhibición | _pendiente de crear_ | Sin software ni configuración todavía |
 
 Cronograma de avance: ver [`cronograma.md`](cronograma.md).
 
